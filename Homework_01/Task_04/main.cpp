@@ -1,5 +1,4 @@
 #include <array>
-#include <fstream>
 #include <iostream>
 #include <limits>
 
@@ -15,19 +14,8 @@ T findMaxNumber(const std::array<T, N>& numsArr) {
 }
 
 int main() {
-    const char* filePath = "Homework_01/Task_04/numbers.txt";
-    std::ifstream inputFile(filePath, std::ios::in);
-    if (!inputFile.is_open()) {
-        std::cerr << "Failed to open input file\n";
-        exit(EXIT_FAILURE);
-    }
-
     std::array<float, 3> numsArr;
-    inputFile >> numsArr[0] >> numsArr[1] >> numsArr[2];
-    if (inputFile.eof()) {
-        std::cout << "Numbers successfully read\n";
-    }
-    inputFile.close();
+    std::cin >> numsArr[0] >> numsArr[1] >> numsArr[2];
 
     std::cout << "Max number is: " << findMaxNumber(numsArr) << "\n";
 
