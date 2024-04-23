@@ -1,0 +1,23 @@
+// 1
+mkdir day1 && cd day1 && touch test{1..3}
+
+// 2
+echo "Hello bash" > test1 && date > test2 && pwd > test3
+
+// 3
+mkdir testDir && cp -v test* testDir/
+
+// 4
+mkdir -p testDir/testNested && cp test{1..2} testDir/testNested
+
+// 5
+rm test{1..3}
+
+// 6
+mkdir testDirCopy && cp -rv testDir/* testDirCopy/
+
+// 7
+rm testDir/test1
+
+// 8
+rm -rf testDirCopy/
