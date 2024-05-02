@@ -1,0 +1,14 @@
+// 1 Run the preprocessor
+g++ -E Program.cpp -o program.i
+g++ -E Swap.cpp -o swap.i
+
+// 2 Compile to assembly code
+g++ -S program.i -o program.s
+g++ -S swap.i -o swap.s
+
+// 3 Run the assembler to generate object files
+g++ -c program.s -o program.o
+g++ -c swap.s -o swap.o
+
+// 4 Link the object files into binary program
+g++ program.o swap.o -o program
