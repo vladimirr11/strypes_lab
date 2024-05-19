@@ -22,7 +22,7 @@ bool checkPrimeNum(const int64_t num) {
             return false;
         }
     }
-
+    
     return true;
 }
 

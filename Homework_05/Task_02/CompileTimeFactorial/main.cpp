@@ -1,7 +1,10 @@
 #include <cassert>
 #include <cstdint>
+#include <iostream>
+#include <tuple>
+#include <utility>
 
-/// @brief Metafunction that calculate factorial of number at compile time
+/// @brief Metafunction that calculates factorial of number at compile time
 template <uint64_t N>
 struct StaticFactorial {
     static constexpr uint64_t value = N * StaticFactorial<N - 1>::value;
@@ -19,12 +22,30 @@ struct StaticFactorial<1> {
     static constexpr uint64_t value = 1;
 };
 
+/// @brief Function template that computes the nth factorial number and test its validity
+template <typename IntT, IntT nthNum>
+void runTest() {
+    constexpr auto factorial = [=]() {
+        IntT res = 1;
+        for (IntT i = nthNum; i >= 2; --i) {
+            res *= i;
+        }
+        return res;
+    }();
+    std::cout << "Factorail for number " << nthNum << " = " << factorial;
+    static_assert(StaticFactorial<nthNum>::value == factorial, " [TEST FAILED]");
+    std::cout << " [TEST PASSED]\n";
+}
+
+/// @brief Run test cases for an integer sequence from 0 to idxPack::size - 1
+template <typename IntT, IntT... idxPack>
+void testStaticFactorial(std::integer_sequence<IntT, idxPack...>) {
+    (runTest<IntT, idxPack>(), ...);
+}
+
 int main() {
-    static_assert(StaticFactorial<0>::value == 1, "factorial<0> failed");
-    static_assert(StaticFactorial<1>::value == 1, "factorial<1> failed");
-    static_assert(StaticFactorial<2>::value == 2, "factorial<2> failed");
-    static_assert(StaticFactorial<3>::value == 6, "factorial<3> failed");
-    static_assert(StaticFactorial<4>::value == 24, "factorial<4> failed");
-    static_assert(StaticFactorial<5>::value == 120, "factorial<5> failed");
+    // Just for fun :)
+    testStaticFactorial(std::make_integer_sequence<uint64_t, 21>{});
+
     return 0;
 }
