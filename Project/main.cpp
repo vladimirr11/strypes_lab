@@ -8,6 +8,7 @@
 
 static constexpr auto MAX_CIRCUITS = 100;
 
+// Съдържа данните на интегрална схема
 struct IntegratedCircuit {
     std::string name = "";
     std::string expr = "";
@@ -15,11 +16,13 @@ struct IntegratedCircuit {
     CharVector arguments;
 };
 
+// Съдържа аргументите за вход на интегрална схема
 struct CircuitInput {
-    std::string circuitName = "";
+    std::string circuitName = "";  // Таргетната ис
     IntVector args;
 };
 
+// Пази всички интегрални схеми в програмата
 struct CircuitStorage {
     IntegratedCircuit* circuits = nullptr;
     int size = 0;
@@ -27,6 +30,7 @@ struct CircuitStorage {
 };
 
 namespace utils {
+// Парсва име на файл
 std::string getFileName(std::istream& istream) {
     std::string fileName;
     std::getline(istream >> std::ws, fileName);
@@ -34,6 +38,17 @@ std::string getFileName(std::istream& istream) {
     return fileName;
 }
 
+// Принтира данните за дадена ис
+void printCircuit(const IntegratedCircuit& circuit) {
+    const int argSize = circuit.arguments.size;
+    std::cout << circuit.name << "(";
+    for (int i = 0; i < argSize - 1; i++) {
+        std::cout << circuit.arguments.data[i] << ", ";
+    }
+    std::cout << circuit.arguments.data[argSize - 1] << ") " << circuit.expr << "\n";
+}
+
+// Превръща входен израз на ис в токени
 CharVector tokenizeExpression(const std::string& expr) {
     CharVector tokens = makeCharVector(100);
     for (const auto ch : expr) {
@@ -45,6 +60,7 @@ CharVector tokenizeExpression(const std::string& expr) {
     return tokens;
 }
 
+// Проверява дали входовете на ис са същите като тези които се използват в логическия израз
 bool validateCircuit(const IntegratedCircuit& circuit) {
     for (int i = 0; i < circuit.tokenizedExpr.size; i++) {
         const auto token = circuit.tokenizedExpr.data[i];
@@ -67,8 +83,8 @@ bool validateCircuit(const IntegratedCircuit& circuit) {
     return true;
 }
 
-// Замества аргументите на логичиския израз с конкретни цифрови стойности взети от RUN команда или
-// генерирани автоматично. Връща резултата като масив от char-ове.
+// Замества входовете на логичиския израз с конкретни цифрови стойности взети от RUN команда или
+// генерирани автоматично
 CharVector getInputExpr(const IntegratedCircuit& circuit, const CircuitInput& input) {
     CharVector inputExpr = makeCharVector(100);
     for (int i = 0; i < circuit.tokenizedExpr.size; i++) {
@@ -86,6 +102,7 @@ CharVector getInputExpr(const IntegratedCircuit& circuit, const CircuitInput& in
     return inputExpr;
 }
 
+// Превръща инфиксен запис на логически израз в постфиксен
 CharVector convertInfixToPostfix(const CharVector& infixTokens) {
     CharVector operators = makeCharVector(infixTokens.capacity);
     CharVector postfixExpr = makeCharVector(infixTokens.capacity);
@@ -119,6 +136,7 @@ CharVector convertInfixToPostfix(const CharVector& infixTokens) {
     return postfixExpr;
 }
 
+// Изпълнява логически израз в постфиксен запис
 int evaluatePostfixExpr(const CharVector& postfixExpr) {
     Stack exprStack;
     for (int i = 0; i < postfixExpr.size; i++) {
@@ -155,11 +173,12 @@ int evaluatePostfixExpr(const CharVector& postfixExpr) {
             }
         }
     }
-    assert(getStackSize(exprStack) == 1 && "Something is wrond");
+    assert(getStackSize(exprStack) == 1 && "Something is wrong");
     return peekStack(exprStack);
 }
 }  // namespace utils
 
+// Прави нова ис
 IntegratedCircuit makeIntegratedCircuit() {
     IntegratedCircuit circuit;
     circuit.tokenizedExpr = makeCharVector(100);
@@ -167,24 +186,28 @@ IntegratedCircuit makeIntegratedCircuit() {
     return circuit;
 }
 
-void freeIntegratedCicruit(IntegratedCircuit& circuit) {
+// Освобождава паметта на дадената ис
+void freeIntegratedCircuit(IntegratedCircuit& circuit) {
     clearCharVector(circuit.tokenizedExpr);
     clearCharVector(circuit.arguments);
     circuit.name = "";
     circuit.expr = "";
 }
 
+// Прави нов вход за ис
 CircuitInput makeCircuitInput() {
     CircuitInput input;
     input.args = makeIntVector(100);
     return input;
 }
 
+// Освобождава паметта на дадения вход
 void freeCircuitInput(CircuitInput& input) {
     clearIntVector(input.args);
     input.circuitName = "";
 }
 
+// Прави хранилище за ис
 CircuitStorage makeCircuitStorage(const int capacity) {
     CircuitStorage storage;
     storage.circuits = new IntegratedCircuit[capacity];
@@ -192,9 +215,10 @@ CircuitStorage makeCircuitStorage(const int capacity) {
     return storage;
 }
 
+// Освобождава паметта за всчки ис в хронилището
 void freeCircuitStorage(CircuitStorage& storage) {
     for (int i = 0; i < storage.size; i++) {
-        freeIntegratedCicruit(storage.circuits[i]);
+        freeIntegratedCircuit(storage.circuits[i]);
     }
     delete[] storage.circuits;
     storage.circuits = nullptr;
@@ -202,6 +226,7 @@ void freeCircuitStorage(CircuitStorage& storage) {
     storage.size = 0;
 }
 
+// Копира дадена ис в хранилището
 void addCircuit(CircuitStorage& storage, const IntegratedCircuit& circuit) {
     assert(storage.size < storage.capacity && "Circuit storage capacity exceeded");
     // Копираме интегралната схема
@@ -224,6 +249,14 @@ void addCircuit(CircuitStorage& storage, const IntegratedCircuit& circuit) {
     storage.size++;
 }
 
+// Принтираме всички налични ис
+void printStorage(const CircuitStorage& storage) {
+    for (int i = 0; i < storage.size; i++) {
+        utils::printCircuit(storage.circuits[i]);
+    }
+}
+
+// Търсим ис в хранилището и я връщаме при нейното наличие
 IntegratedCircuit* findCircuit(const CircuitStorage& storage, const std::string& name) {
     for (int i = 0; i < storage.size; i++) {
         if (storage.circuits[i].name == name) {
@@ -233,6 +266,7 @@ IntegratedCircuit* findCircuit(const CircuitStorage& storage, const std::string&
     return nullptr;
 }
 
+// Проверяваме дали ис се съдържа в хранилището
 bool hasCircuit(const CircuitStorage& storage, const std::string& name) {
     for (int i = 0; i < storage.size; i++) {
         if (storage.circuits[i].name == name) {
@@ -242,6 +276,7 @@ bool hasCircuit(const CircuitStorage& storage, const std::string& name) {
     return false;
 }
 
+// Парсваме ис от стандартния вход
 IntegratedCircuit parseIntegratedCircuit(std::istream& istream) {
     IntegratedCircuit circuit = makeIntegratedCircuit();
 
@@ -259,12 +294,13 @@ IntegratedCircuit parseIntegratedCircuit(std::istream& istream) {
     circuit.expr = expression.substr(expression.find_first_of("\""));
     circuit.tokenizedExpr = utils::tokenizeExpression(circuit.expr);
     if (!utils::validateCircuit(circuit)) {
-        freeIntegratedCicruit(circuit);
+        freeIntegratedCircuit(circuit);
     }
 
     return circuit;
 }
 
+// Парсваме вход за ис
 CircuitInput parseRunCommand(std::istream& istream) {
     CircuitInput input = makeCircuitInput();
     std::getline(istream >> std::ws, input.circuitName, '(');
@@ -284,6 +320,7 @@ CircuitInput parseRunCommand(std::istream& istream) {
     return input;
 }
 
+// Изпълняваме ис с дадения вход
 int runCircuit(const IntegratedCircuit& circuit, const CircuitInput& input) {
     CharVector inputInfixExpr = utils::getInputExpr(circuit, input);
     CharVector postfixExpr = utils::convertInfixToPostfix(inputInfixExpr);
@@ -294,6 +331,7 @@ int runCircuit(const IntegratedCircuit& circuit, const CircuitInput& input) {
     return result;
 }
 
+// Принтираме всички възможни комбинации за вход на ис заедно и резултата
 void printAll(const IntegratedCircuit& circuit, CircuitInput& input, const int currIdx) {
     if (currIdx == input.args.size) {
         for (int i = 0; i < input.args.size - 1; i++) {
@@ -311,6 +349,7 @@ void printAll(const IntegratedCircuit& circuit, CircuitInput& input, const int c
     }
 }
 
+// Изпълнява командата ALL
 void runAllCommand(IntegratedCircuit& circuit) {
     CircuitInput input = makeCircuitInput();
     input.circuitName = circuit.name;
@@ -323,6 +362,7 @@ void runAllCommand(IntegratedCircuit& circuit) {
     freeCircuitInput(input);
 }
 
+// Парсва таблица на истинност от даден файл
 TruthTable parseTruthTable(const std::string& file) {
     TruthTable table = makeTruthTable(100);
     std::ifstream inputFile(file, std::ios::in);
@@ -343,20 +383,48 @@ TruthTable parseTruthTable(const std::string& file) {
     return table;
 }
 
-void runFindCommand(const TruthTable& table) {
+// Прави синтез по 1 за дадения вход
+std::string synthLogicFuncByOne(const int* input, const int inputSize) {
+    std::string result = "(";
+    for (int i = 0; i < inputSize; i++) {
+        const char arg = i + 49 + '0';
+        if (input[i] == 0) {
+            result.append("!");
+        }
+        result += arg;
+        if (i != inputSize - 1) {
+            result += " & ";
+        }
+    }
+    result += ")";
+    return result;
+}
+
+// Изпълнява командата FIND
+std::string runFindCommand(const TruthTable& table) {
+    std::string logicFunc = "\"";
     for (int i = 0; i < table.rows; i++) {
         // Вземаме резултата на ф-та за настоящия ред
         const int res = table.data[i * table.cols + table.cols - 1];
         if (1 == res) {
             // Копираме входовете на ф-ята
             int* currInput = utils::allocIntArray(table.cols - 1);
-            for (int k = 0; k < table.cols; k++) {
-                
+            for (int k = 0; k < table.cols - 1; k++) {
+                currInput[k] = table.data[i * table.cols + k];
             }
-            // Освобождаваме паметта 
+            // Синтезираме по 1
+            logicFunc += synthLogicFuncByOne(currInput, table.cols - 1);
+            logicFunc += " | ";
+            // Освобождаваме паметта
             utils::freeIntArray(currInput);
         }
     }
+
+    if (!logicFunc.empty()) {
+        logicFunc = logicFunc.substr(0, logicFunc.find_last_of(')') + 1);
+        logicFunc.append("\"");
+    }
+    return logicFunc;
 }
 
 int main() {
@@ -368,22 +436,25 @@ int main() {
         std::istringstream istream(input);
         std::string command;
         istream >> command;
+        // Въвеждаме интегрална схема
         if (command == "DEFINE") {
             IntegratedCircuit circuit = parseIntegratedCircuit(istream);
             if (circuit.name.empty()) {
                 std::cerr << "Invalid expression entered. Skip DEFINE command.\nEnter command: ";
-                freeIntegratedCicruit(circuit);
+                freeIntegratedCircuit(circuit);
                 continue;
             }
             if (hasCircuit(storage, circuit.name)) {
                 std::cerr << "Integrated circuit with name " << circuit.name
                           << " already exist. Skip DEFINE command." << std::endl;
             } else {
-                addCircuit(storage, circuit);
+                addCircuit(storage, circuit); 
             }
             // Освобождаваме паметта
-            freeIntegratedCicruit(circuit);
-        } else if (command == "RUN") {
+            freeIntegratedCircuit(circuit);
+        }
+        // Изпълняваме интегрална схема по име и входни параметри
+        else if (command == "RUN") {
             CircuitInput input = parseRunCommand(istream);
             IntegratedCircuit* circuit = findCircuit(storage, input.circuitName);
             if (!circuit) {
@@ -395,7 +466,9 @@ int main() {
             }
             // Освобождаваме паметта
             freeCircuitInput(input);
-        } else if (command == "ALL") {
+        }
+        // Изпълняваме дадена интегрална схема с всички възможни входове
+        else if (command == "ALL") {
             std::string circuitName;
             istream >> circuitName;
             IntegratedCircuit* circuit = findCircuit(storage, circuitName);
@@ -405,12 +478,20 @@ int main() {
             } else {
                 runAllCommand(*circuit);
             }
-        } else if (command == "FIND") {
+        }
+        // Изчисляваме интегрална схема по дадена таблица на истинност от файл
+        else if (command == "FIND") {
             const std::string fileName = utils::getFileName(istream);
             TruthTable table = parseTruthTable(fileName);
-            runFindCommand(table);
+            utils::printTruthTable(table);
+            const std::string logicFunc = runFindCommand(table);
+            std::cout << logicFunc << std::endl;
             // Освобождаваме паметта
             freeTruthTable(table);
+        }
+        // Принтираме всички налични интеглани схеми
+        else if (command == "PRINT") {
+            printStorage(storage);
         }
         std::cout << "Enter command: ";
     }
