@@ -1,6 +1,8 @@
 #include <cassert>
 #include <iostream>
 
+// Съдържа полезни структури и функции за работа с динамична памет
+
 static constexpr auto MAX_STACK_SIZE = 100;
 
 struct CharVector {

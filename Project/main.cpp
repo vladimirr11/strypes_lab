@@ -48,18 +48,6 @@ void printCircuit(const IntegratedCircuit& circuit) {
     std::cout << circuit.arguments.data[argSize - 1] << ") " << circuit.expr << "\n";
 }
 
-// Превръща входен израз на ис в токени
-CharVector tokenizeExpression(const std::string& expr) {
-    CharVector tokens = makeCharVector(100);
-    for (const auto ch : expr) {
-        if (ch == ' ' || ch == '\"') {
-            continue;
-        }
-        pushToCharVector(tokens, ch);
-    }
-    return tokens;
-}
-
 // Проверява дали входовете на ис са същите като тези които се използват в логическия израз
 bool validateCircuit(const IntegratedCircuit& circuit) {
     for (int i = 0; i < circuit.tokenizedExpr.size; i++) {
@@ -102,7 +90,32 @@ CharVector getInputExpr(const IntegratedCircuit& circuit, const CircuitInput& in
     return inputExpr;
 }
 
-// Превръща инфиксен запис на логически израз в постфиксен
+// Превръща входен израз на ис в токени
+void tokenizeExpression(CharVector& tokens, const std::string& expr) {
+    for (const auto ch : expr) {
+        if (ch == ' ' || ch == '\"') {
+            continue;
+        }
+        pushToCharVector(tokens, ch);
+    }
+}
+
+// Връща предходността на логическите оператори
+int getPrecedence(const char op) {
+    switch (op) {
+    case '!':
+        return 3;
+    case '&':
+        return 2;
+    case '|':
+        return 1;
+    default:
+        std::cerr << "Unknown operator found: " << op << std::endl;
+    }
+    return -1;
+}
+
+// Превръща инфиксен запис на логически израз в постфиксен (използва Shunting Yard алгоритъма)
 CharVector convertInfixToPostfix(const CharVector& infixTokens) {
     CharVector operators = makeCharVector(infixTokens.capacity);
     CharVector postfixExpr = makeCharVector(infixTokens.capacity);
@@ -111,16 +124,31 @@ CharVector convertInfixToPostfix(const CharVector& infixTokens) {
         const char token = infixTokens.data[i];
         if (std::isdigit(token)) {
             pushToCharVector(postfixExpr, token);
-        } else if (token == '(' || token == '!' || token == '&' || token == '|') {
+        } else if (token == '(') {
             pushToCharVector(operators, token);
         } else if (token == ')') {
             char op = getCharVectorBack(operators);
             while (op != '(') {
                 popFromCharVector(operators);
                 pushToCharVector(postfixExpr, op);
+                assert(operators.size > 0 && "Mismatch in parenthesis found");
                 op = getCharVectorBack(operators);
             }
             popFromCharVector(operators);
+        } else if (token == '!' || token == '&' || token == '|') {
+            if (operators.size == 0) {
+                pushToCharVector(operators, token);
+                continue;
+            }
+            char op = getCharVectorBack(operators);
+            while (op != '(' && operators.size > 0 && getPrecedence(op) > getPrecedence(token)) {
+                popFromCharVector(operators);
+                pushToCharVector(postfixExpr, op);
+                if (operators.size > 0) {
+                    op = getCharVectorBack(operators);
+                }
+            }
+            pushToCharVector(operators, token);
         }
     }
 
@@ -132,7 +160,6 @@ CharVector convertInfixToPostfix(const CharVector& infixTokens) {
 
     // Освобождаваме паметта
     clearCharVector(operators);
-
     return postfixExpr;
 }
 
@@ -226,10 +253,10 @@ void freeCircuitStorage(CircuitStorage& storage) {
     storage.size = 0;
 }
 
-// Копира дадена ис в хранилището
+// Прави дълбоко копие на дадена ис в хранилището
 void addCircuit(CircuitStorage& storage, const IntegratedCircuit& circuit) {
     assert(storage.size < storage.capacity && "Circuit storage capacity exceeded");
-    // Копираме интегралната схема
+    // Правим нова ис
     storage.circuits[storage.size] = makeIntegratedCircuit();
     auto& storageCircuit = storage.circuits[storage.size];
     // Копираме аргументите (входа) на схемата
@@ -292,7 +319,8 @@ IntegratedCircuit parseIntegratedCircuit(std::istream& istream) {
     std::string expression;
     std::getline(istream, expression);
     circuit.expr = expression.substr(expression.find_first_of("\""));
-    circuit.tokenizedExpr = utils::tokenizeExpression(circuit.expr);
+
+    utils::tokenizeExpression(circuit.tokenizedExpr, circuit.expr);
     if (!utils::validateCircuit(circuit)) {
         freeIntegratedCircuit(circuit);
     }
@@ -331,7 +359,7 @@ int runCircuit(const IntegratedCircuit& circuit, const CircuitInput& input) {
     return result;
 }
 
-// Принтираме всички възможни комбинации за вход на ис заедно и резултата
+// Принтираме всички възможни комбинации за вход на ис заедно с резултата
 void printAll(const IntegratedCircuit& circuit, CircuitInput& input, const int currIdx) {
     if (currIdx == input.args.size) {
         for (int i = 0; i < input.args.size - 1; i++) {
@@ -366,7 +394,14 @@ void runAllCommand(IntegratedCircuit& circuit) {
 TruthTable parseTruthTable(const std::string& file) {
     TruthTable table = makeTruthTable(100);
     std::ifstream inputFile(file, std::ios::in);
-    assert(inputFile.is_open() && "Input file is not open");
+    // assert(inputFile.is_open() && "Input file is not open");
+    if (!inputFile.is_open()) {
+        std::cerr << "Failed to parse truth table for file with name " << file << ".\n";
+        std::cerr
+            << "Maybe the file name is wrong or the file is missing from the working directory.\n";
+        freeTruthTable(table);
+        return table;
+    }
 
     std::string line;
     while (std::getline(inputFile, line)) {
@@ -448,7 +483,7 @@ int main() {
                 std::cerr << "Integrated circuit with name " << circuit.name
                           << " already exist. Skip DEFINE command." << std::endl;
             } else {
-                addCircuit(storage, circuit); 
+                addCircuit(storage, circuit);
             }
             // Освобождаваме паметта
             freeIntegratedCircuit(circuit);
@@ -483,6 +518,10 @@ int main() {
         else if (command == "FIND") {
             const std::string fileName = utils::getFileName(istream);
             TruthTable table = parseTruthTable(fileName);
+            if (!table.data) {
+                std::cerr << "Skip FIND command.\nEnter command: ";
+                continue;
+            }
             utils::printTruthTable(table);
             const std::string logicFunc = runFindCommand(table);
             std::cout << logicFunc << std::endl;
@@ -496,6 +535,8 @@ int main() {
         std::cout << "Enter command: ";
     }
 
+    // Програмата би трябвало да leak-ва само служебни байтове
+    // всички CharVector-и IntVector-и и структури които ги съдържат се почистват правилно
     freeCircuitStorage(storage);
 
     return 0;
